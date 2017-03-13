@@ -362,7 +362,7 @@ func main() {
 	var printVer, kcpOff bool
 
 	flag.BoolVar(&printVer, "version", false, "print version")
-	flag.StringVar(&configFile, "c", "config.json", "specify config file")
+	flag.StringVar(&configFile, "c", "config.json", "specify ss config file")
 	flag.StringVar(&cmdServer, "s", "", "server address")
 	flag.StringVar(&cmdLocal, "b", "", "local address, listen only to this address if specified")
 	flag.StringVar(&cmdConfig.Password, "k", "", "password")

@@ -22,7 +22,7 @@ func main() {
 	var core int
 
 	flag.BoolVar(&printVer, "version", false, "print version")
-	flag.StringVar(&configFile, "c", "config.json", "specify config file")
+	flag.StringVar(&configFile, "c", "config.json", "specify ss config file")
 	flag.StringVar(&ssConfig.Password, "k", "", "password")
 	flag.IntVar(&ssConfig.ServerPort, "p", 0, "server port")
 	flag.IntVar(&ssConfig.Timeout, "t", 300, "timeout in seconds")
