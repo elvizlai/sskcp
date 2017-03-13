@@ -31,6 +31,8 @@ func main() {
 	flag.BoolVar((*bool)(&debug), "d", false, "print debug message")
 	flag.BoolVar(&udp, "u", false, "UDP Relay")
 
+	flag.IntVar(&kcptun.SndWnd, "snd", 1024, "set send window size(num of packets)")
+	flag.IntVar(&kcptun.RcvWnd, "rcv", 1024, "set receive window size(num of packets)")
 	flag.IntVar(&kcptun.DSCP, "dscp", 46, "set DSCP(6bit)")
 
 	flag.Parse()
