@@ -18,7 +18,6 @@ import (
 func main() {
 	log.SetOutput(os.Stdout)
 
-	var config *ss.Config
 	var cmdConfig ss.Config
 	var printVer bool
 	var core int
@@ -52,40 +51,40 @@ func main() {
 	}
 
 	var err error
-	config, err = ss.ParseConfig(sss.ConfigFile)
+	sss.Config, err = ss.ParseConfig(sss.ConfigFile)
 	if err != nil {
 		if !os.IsNotExist(err) {
 			fmt.Fprintf(os.Stderr, "error reading %s: %v\n", sss.ConfigFile, err)
 			os.Exit(1)
 		}
-		config = &cmdConfig
-		ss.UpdateConfig(config, config)
+		sss.Config = &cmdConfig
+		ss.UpdateConfig(sss.Config, sss.Config)
 	} else {
-		ss.UpdateConfig(config, &cmdConfig)
+		ss.UpdateConfig(sss.Config, &cmdConfig)
 	}
-	if config.Method == "" {
-		config.Method = "aes-256-cfb"
+	if sss.Config.Method == "" {
+		sss.Config.Method = "aes-256-cfb"
 	}
-	if err = ss.CheckCipherMethod(config.Method); err != nil {
+	if err = ss.CheckCipherMethod(sss.Config.Method); err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}
-	if err = sss.UnifyPortPassword(config); err != nil {
+	if err = sss.UnifyPortPassword(sss.Config); err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}
 	if core > 0 {
 		runtime.GOMAXPROCS(core)
 	}
-	for port, password := range config.PortPassword {
+	for port, password := range sss.Config.PortPassword {
 		portNumeric, err := strconv.Atoi(port)
 		if err != nil {
 			fmt.Fprintln(os.Stderr, err)
 			os.Exit(1)
 		}
-		go sss.Run(port, password, config.Auth)
+		go sss.Run(port, password, sss.Config.Auth)
 		if sss.UDP {
-			go sss.RunUDP(port, password, config.Auth)
+			go sss.RunUDP(port, password, sss.Config.Auth)
 		}
 		go kcps.RunKCPTun("0.0.0.0:"+strconv.Itoa(10000+portNumeric), "127.0.0.1:"+port)
 	}
