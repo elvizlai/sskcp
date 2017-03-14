@@ -8,8 +8,8 @@ import (
 	"net"
 	"time"
 
+	c "github.com/elvizlai/sskcp/config"
 	"github.com/elvizlai/sskcp/kcptun"
-
 	kcp "github.com/xtaci/kcp-go"
 	"github.com/xtaci/smux"
 	"golang.org/x/crypto/pbkdf2"
@@ -19,8 +19,8 @@ import (
 func handleMux(conn io.ReadWriteCloser, target string) {
 	// stream multiplex
 	smuxConfig := smux.DefaultConfig()
-	smuxConfig.MaxReceiveBuffer = kcptun.SockBuf
-	smuxConfig.KeepAliveInterval = time.Duration(kcptun.KeepAlive) * time.Second
+	smuxConfig.MaxReceiveBuffer = c.SockBuf
+	smuxConfig.KeepAliveInterval = time.Duration(c.KeepAlive) * time.Second
 
 	mux, err := smux.Server(conn, smuxConfig)
 	if err != nil {
@@ -77,22 +77,22 @@ func handleClient(p1, p2 io.ReadWriteCloser) {
 func RunKCPTun(listenAddr, targetAddr string) {
 	rand.Seed(int64(time.Now().Nanosecond()))
 
-	pass := pbkdf2.Key([]byte(kcptun.Key), []byte(kcptun.SALT), 4096, 32, sha1.New)
+	pass := pbkdf2.Key([]byte(c.Key), []byte(c.SALT), 4096, 32, sha1.New)
 
 	block, _ := kcp.NewAESBlockCrypt(pass)
 
-	lis, err := kcp.ListenWithOptions(listenAddr, block, kcptun.DataShard, kcptun.ParityShard)
+	lis, err := kcp.ListenWithOptions(listenAddr, block, c.DataShard, c.ParityShard)
 	kcptun.CheckError(err)
 	log.Println("kcptun server using smux listening on:", listenAddr)
 
-	if err := lis.SetDSCP(kcptun.DSCP); err != nil {
+	if err := lis.SetDSCP(c.DSCP); err != nil {
 		log.Println("SetDSCP:", err)
 	}
 
-	if err := lis.SetReadBuffer(kcptun.SockBuf); err != nil {
+	if err := lis.SetReadBuffer(c.SockBuf); err != nil {
 		log.Println("SetReadBuffer:", err)
 	}
-	if err := lis.SetWriteBuffer(kcptun.SockBuf); err != nil {
+	if err := lis.SetWriteBuffer(c.SockBuf); err != nil {
 		log.Println("SetWriteBuffer:", err)
 	}
 
@@ -102,15 +102,14 @@ func RunKCPTun(listenAddr, targetAddr string) {
 		if conn, err := lis.AcceptKCP(); err == nil {
 			log.Println("remote address:", conn.RemoteAddr())
 			conn.SetStreamMode(true)
-			conn.SetNoDelay(kcptun.NoDelay, kcptun.Interval, kcptun.Resend, kcptun.NoCongestion)
-			conn.SetWindowSize(kcptun.SndWnd, kcptun.RcvWnd)
-			conn.SetMtu(kcptun.MTU)
-			conn.SetACKNoDelay(kcptun.AckNodelay)
-			conn.SetDSCP(kcptun.DSCP)
+			conn.SetNoDelay(c.NoDelay, c.Interval, c.Resend, c.NoCongestion)
+			conn.SetWindowSize(c.SndWnd, c.RcvWnd)
+			conn.SetMtu(c.MTU)
+			conn.SetACKNoDelay(c.AckNodelay)
+			conn.SetDSCP(c.DSCP)
 			go handleMux(kcptun.NewCompStream(conn), targetAddr)
 		} else {
 			log.Printf("%+v", err)
 		}
 	}
-
 }

@@ -1,4 +1,4 @@
-package main
+package server
 
 import (
 	"bytes"
@@ -34,8 +34,8 @@ const (
 	lenHmacSha1 = 10
 )
 
-var debug ss.DebugLog
-var udp bool
+var Debug ss.DebugLog
+var UDP bool
 
 func getRequest(conn *ss.Conn, auth bool) (host string, ota bool, err error) {
 	ss.SetReadTimeout(conn)
@@ -118,15 +118,15 @@ func handleConnection(conn *ss.Conn, auth bool) {
 		nextLogConnCnt += logCntDelta
 	}
 
-	// function arguments are always evaluated, so surround debug statement
+	// function arguments are always evaluated, so surround Debug statement
 	// with if statement
-	if debug {
-		debug.Printf("new client %s->%s\n", conn.RemoteAddr().String(), conn.LocalAddr())
+	if Debug {
+		Debug.Printf("new client %s->%s\n", conn.RemoteAddr().String(), conn.LocalAddr())
 	}
 	closed := false
 	defer func() {
-		if debug {
-			debug.Printf("closed pipe %s<->%s\n", conn.RemoteAddr(), host)
+		if Debug {
+			Debug.Printf("closed pipe %s<->%s\n", conn.RemoteAddr(), host)
 		}
 		connCnt--
 		if !closed {
@@ -146,7 +146,7 @@ func handleConnection(conn *ss.Conn, auth bool) {
 		closed = true
 		return
 	}
-	debug.Println("connecting", host)
+	Debug.Println("connecting", host)
 	remote, err := net.Dial("tcp", host)
 	if err != nil {
 		if ne, ok := err.(*net.OpError); ok && (ne.Err == syscall.EMFILE || ne.Err == syscall.ENFILE) {
@@ -163,8 +163,8 @@ func handleConnection(conn *ss.Conn, auth bool) {
 			remote.Close()
 		}
 	}()
-	if debug {
-		debug.Printf("piping %s<->%s ota=%v connOta=%v", conn.RemoteAddr(), host, ota, conn.IsOta())
+	if Debug {
+		Debug.Printf("piping %s<->%s ota=%v connOta=%v", conn.RemoteAddr(), host, ota, conn.IsOta())
 	}
 	if ota {
 		go ss.PipeThenCloseOta(conn, remote)
@@ -223,7 +223,7 @@ func (pm *PasswdManager) del(port string) {
 	if !ok {
 		return
 	}
-	if udp {
+	if UDP {
 		upl, ok := pm.getUDP(port)
 		if !ok {
 			return
@@ -233,7 +233,7 @@ func (pm *PasswdManager) del(port string) {
 	pl.listener.Close()
 	pm.Lock()
 	delete(pm.portListener, port)
-	if udp {
+	if UDP {
 		delete(pm.udpListener, port)
 	}
 	pm.Unlock()
@@ -254,13 +254,13 @@ func (pm *PasswdManager) updatePortPasswd(port, password string, auth bool) {
 		log.Printf("closing port %s to update password\n", port)
 		pl.listener.Close()
 	}
-	// run will add the new port listener to passwdManager.
+	// Run will add the new port listener to passwdManager.
 	// So there maybe concurrent access to passwdManager and we need lock to protect it.
-	go run(port, password, auth)
-	if udp {
+	go Run(port, password, auth)
+	if UDP {
 		pl, _ := pm.getUDP(port)
 		pl.listener.Close()
-		go runUDP(port, password, auth)
+		go RunUDP(port, password, auth)
 	}
 }
 
@@ -268,24 +268,24 @@ var passwdManager = PasswdManager{portListener: map[string]*PortListener{}, udpL
 
 func updatePasswd() {
 	log.Println("updating password")
-	newconfig, err := ss.ParseConfig(configFile)
+	newconfig, err := ss.ParseConfig(ConfigFile)
 	if err != nil {
-		log.Printf("error parsing config file %s to update password: %v\n", configFile, err)
+		log.Printf("error parsing Config file %s to update password: %v\n", ConfigFile, err)
 		return
 	}
-	oldconfig := config
-	config = newconfig
+	oldconfig := Config
+	Config = newconfig
 
-	if err = unifyPortPassword(config); err != nil {
+	if err = UnifyPortPassword(Config); err != nil {
 		return
 	}
-	for port, passwd := range config.PortPassword {
-		passwdManager.updatePortPasswd(port, passwd, config.Auth)
+	for port, passwd := range Config.PortPassword {
+		passwdManager.updatePortPasswd(port, passwd, Config.Auth)
 		if oldconfig.PortPassword != nil {
 			delete(oldconfig.PortPassword, port)
 		}
 	}
-	// port password still left in the old config should be closed
+	// port password still left in the old Config should be closed
 	for port, _ := range oldconfig.PortPassword {
 		log.Printf("closing port %s as it's deleted\n", port)
 		passwdManager.del(port)
@@ -293,7 +293,7 @@ func updatePasswd() {
 	log.Println("password updated")
 }
 
-func waitSignal() {
+func WaitSignal() {
 	var sigChan = make(chan os.Signal, 1)
 	signal.Notify(sigChan, syscall.SIGHUP)
 	for sig := range sigChan {
@@ -307,7 +307,7 @@ func waitSignal() {
 	}
 }
 
-func run(port, password string, auth bool) {
+func Run(port, password string, auth bool) {
 	ln, err := net.Listen("tcp", ":"+port)
 	if err != nil {
 		log.Printf("error listening port %v: %v\n", port, err)
@@ -320,13 +320,13 @@ func run(port, password string, auth bool) {
 		conn, err := ln.Accept()
 		if err != nil {
 			// listener maybe closed to update password
-			debug.Printf("accept error: %v\n", err)
+			Debug.Printf("accept error: %v\n", err)
 			return
 		}
 		// Creating cipher upon first connection.
 		if cipher == nil {
 			log.Println("creating cipher for port:", port)
-			cipher, err = ss.NewCipher(config.Method, password)
+			cipher, err = ss.NewCipher(Config.Method, password)
 			if err != nil {
 				log.Printf("Error generating cipher for port: %s %v\n", port, err)
 				conn.Close()
@@ -337,29 +337,29 @@ func run(port, password string, auth bool) {
 	}
 }
 
-func runUDP(port, password string, auth bool) {
+func RunUDP(port, password string, auth bool) {
 	var cipher *ss.Cipher
 	port_i, _ := strconv.Atoi(port)
-	log.Printf("listening udp port %v\n", port)
-	conn, err := net.ListenUDP("udp", &net.UDPAddr{
+	log.Printf("listening UDP port %v\n", port)
+	conn, err := net.ListenUDP("UDP", &net.UDPAddr{
 		IP:   net.IPv6zero,
 		Port: port_i,
 	})
 	passwdManager.addUDP(port, password, conn)
 	if err != nil {
-		log.Printf("error listening udp port %v: %v\n", port, err)
+		log.Printf("error listening UDP port %v: %v\n", port, err)
 		return
 	}
 	defer conn.Close()
-	cipher, err = ss.NewCipher(config.Method, password)
+	cipher, err = ss.NewCipher(Config.Method, password)
 	if err != nil {
-		log.Printf("Error generating cipher for udp port: %s %v\n", port, err)
+		log.Printf("Error generating cipher for UDP port: %s %v\n", port, err)
 		conn.Close()
 	}
 	SecurePacketConn := ss.NewSecurePacketConn(conn, cipher.Copy(), auth)
 	for {
 		if err := ss.ReadAndHandleUDPReq(SecurePacketConn); err != nil {
-			debug.Println(err)
+			Debug.Println(err)
 		}
 	}
 }
@@ -368,7 +368,7 @@ func enoughOptions(config *ss.Config) bool {
 	return config.ServerPort != 0 && config.Password != ""
 }
 
-func unifyPortPassword(config *ss.Config) (err error) {
+func UnifyPortPassword(config *ss.Config) (err error) {
 	if len(config.PortPassword) == 0 { // this handles both nil PortPassword and empty one
 		if !enoughOptions(config) {
 			fmt.Fprintln(os.Stderr, "must specify both port and password")
@@ -384,5 +384,5 @@ func unifyPortPassword(config *ss.Config) (err error) {
 	return
 }
 
-var configFile string
-var config *ss.Config
+var ConfigFile string
+var Config *ss.Config

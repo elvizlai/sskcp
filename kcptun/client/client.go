@@ -8,8 +8,8 @@ import (
 	"net"
 	"time"
 
+	c "github.com/elvizlai/sskcp/config"
 	"github.com/elvizlai/sskcp/kcptun"
-
 	"github.com/pkg/errors"
 	kcp "github.com/xtaci/kcp-go"
 	"github.com/xtaci/smux"
@@ -58,32 +58,32 @@ func RunClient(remoteAddr, localAddr string) {
 	listener, err := net.ListenTCP("tcp", addr)
 	kcptun.CheckError(err)
 
-	pass := pbkdf2.Key([]byte(kcptun.Key), []byte(kcptun.SALT), 4096, 32, sha1.New)
+	pass := pbkdf2.Key([]byte(c.Key), []byte(c.SALT), 4096, 32, sha1.New)
 	block, _ := kcp.NewAESBlockCrypt(pass)
 
 	smuxConfig := smux.DefaultConfig()
-	smuxConfig.MaxReceiveBuffer = kcptun.SockBuf
-	smuxConfig.KeepAliveInterval = time.Duration(kcptun.KeepAlive) * time.Second
+	smuxConfig.MaxReceiveBuffer = c.SockBuf
+	smuxConfig.KeepAliveInterval = time.Duration(c.KeepAlive) * time.Second
 
 	createConn := func() (*smux.Session, error) {
-		kcpconn, err := kcp.DialWithOptions(remoteAddr, block, kcptun.DataShard, kcptun.ParityShard)
+		kcpconn, err := kcp.DialWithOptions(remoteAddr, block, c.DataShard, c.ParityShard)
 		if err != nil {
 			return nil, errors.Wrap(err, "createConn()")
 		}
 		kcpconn.SetStreamMode(true)
-		kcpconn.SetNoDelay(kcptun.NoDelay, kcptun.Interval, kcptun.Resend, kcptun.NoCongestion)
-		kcpconn.SetWindowSize(kcptun.SndWnd, kcptun.RcvWnd)
-		kcpconn.SetMtu(kcptun.MTU)
-		kcpconn.SetACKNoDelay(kcptun.AckNodelay)
+		kcpconn.SetNoDelay(c.NoDelay, c.Interval, c.Resend, c.NoCongestion)
+		kcpconn.SetWindowSize(c.SndWnd, c.RcvWnd)
+		kcpconn.SetMtu(c.MTU)
+		kcpconn.SetACKNoDelay(c.AckNodelay)
 
-		if err := kcpconn.SetDSCP(kcptun.DSCP); err != nil {
+		if err := kcpconn.SetDSCP(c.DSCP); err != nil {
 			log.Println("SetDSCP:", err)
 		}
 
-		if err := kcpconn.SetReadBuffer(kcptun.SockBuf); err != nil {
+		if err := kcpconn.SetReadBuffer(c.SockBuf); err != nil {
 			log.Println("SetReadBuffer:", err)
 		}
-		if err := kcpconn.SetWriteBuffer(kcptun.SockBuf); err != nil {
+		if err := kcpconn.SetWriteBuffer(c.SockBuf); err != nil {
 			log.Println("SetWriteBuffer:", err)
 		}
 
@@ -109,7 +109,7 @@ func RunClient(remoteAddr, localAddr string) {
 		}
 	}
 
-	numconn := uint16(kcptun.Conn)
+	numconn := uint16(c.Conn)
 	muxes := make([]struct {
 		session *smux.Session
 		ttl     time.Time
@@ -117,11 +117,11 @@ func RunClient(remoteAddr, localAddr string) {
 
 	for k := range muxes {
 		muxes[k].session = waitConn()
-		muxes[k].ttl = time.Now().Add(time.Duration(kcptun.AutoExpire) * time.Second)
+		muxes[k].ttl = time.Now().Add(time.Duration(c.AutoExpire) * time.Second)
 	}
 
 	chScavenger := make(chan *smux.Session, 128)
-	go scavenger(chScavenger, kcptun.ScavengeTTL)
+	go scavenger(chScavenger, c.ScavengeTTL)
 	// go kcptun.SnmpLogger(kcptun.SnmpLog, kcptun.SnmpPeriod)
 	rr := uint16(0)
 	for {
@@ -131,10 +131,10 @@ func RunClient(remoteAddr, localAddr string) {
 		idx := rr % numconn
 
 		// do auto expiration && reconnection
-		if muxes[idx].session.IsClosed() || (kcptun.AutoExpire > 0 && time.Now().After(muxes[idx].ttl)) {
+		if muxes[idx].session.IsClosed() || (c.AutoExpire > 0 && time.Now().After(muxes[idx].ttl)) {
 			chScavenger <- muxes[idx].session
 			muxes[idx].session = waitConn()
-			muxes[idx].ttl = time.Now().Add(time.Duration(kcptun.AutoExpire) * time.Second)
+			muxes[idx].ttl = time.Now().Add(time.Duration(c.AutoExpire) * time.Second)
 		}
 
 		go handleClient(muxes[idx].session, p1)

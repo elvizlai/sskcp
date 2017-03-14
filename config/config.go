@@ -1,4 +1,4 @@
-package kcptun
+package config
 
 var SndWnd = 1024 // set send window size(num of packets)
 var RcvWnd = 1024 // set receive window size(num of packets)
