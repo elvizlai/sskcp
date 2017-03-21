@@ -43,8 +43,8 @@
         },
         {
             "name": "github.com/xtaci/kcp-go",
-            "version": "v3.6",
-            "revision": "bed7710a018ff6d5d4dc6f6168ead5654bbc57ed",
+            "version": "v3.8",
+            "revision": "943a20abe9e493aeb76b10abf427feaae3013b72",
             "packages": [
                 "."
             ]

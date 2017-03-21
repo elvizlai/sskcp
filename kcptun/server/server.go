@@ -102,6 +102,7 @@ func RunKCPTun(listenAddr, targetAddr string) {
 		if conn, err := lis.AcceptKCP(); err == nil {
 			log.Println("remote address:", conn.RemoteAddr())
 			conn.SetStreamMode(true)
+			conn.SetWriteDelay(true)
 			conn.SetNoDelay(c.NoDelay, c.Interval, c.Resend, c.NoCongestion)
 			conn.SetWindowSize(c.SndWnd, c.RcvWnd)
 			conn.SetMtu(c.MTU)

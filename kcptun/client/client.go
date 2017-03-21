@@ -8,8 +8,8 @@ import (
 	"net"
 	"time"
 
-	c "github.com/elvizlai/sskcp/config"
 	"github.com/elvizlai/sskcp/kcptun"
+	c "github.com/elvizlai/sskcp/config"
 	"github.com/pkg/errors"
 	kcp "github.com/xtaci/kcp-go"
 	"github.com/xtaci/smux"
@@ -71,6 +71,7 @@ func RunClient(remoteAddr, localAddr string) {
 			return nil, errors.Wrap(err, "createConn()")
 		}
 		kcpconn.SetStreamMode(true)
+		kcpconn.SetWriteDelay(true)
 		kcpconn.SetNoDelay(c.NoDelay, c.Interval, c.Resend, c.NoCongestion)
 		kcpconn.SetWindowSize(c.SndWnd, c.RcvWnd)
 		kcpconn.SetMtu(c.MTU)
