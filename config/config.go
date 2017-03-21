@@ -9,6 +9,14 @@ var Conn = 1
 var SnmpLog = "log"
 var SnmpPeriod = 60
 
+// fast3
+var (
+	NoDelay      = 1
+	Interval     = 20
+	Resend       = 2
+	NoCongestion = 1
+)
+
 const (
 	SALT       = "kcp-go" // SALT is use for pbkdf2 key expansion
 	Key        = "1024"   // pre-shared secret between client and server
@@ -18,12 +26,6 @@ const (
 
 	DataShard   = 10 // set reed-solomon erasure coding - datashard
 	ParityShard = 3  // set reed-solomon erasure coding - parityshard
-
-	// fast3
-	NoDelay      = 10
-	Interval     = 20
-	Resend       = 2
-	NoCongestion = 1
 
 	MTU         = 1350 // set maximum transmission unit for UDP packets
 	AckNodelay  = true // flush ack immediately when a packet is received
