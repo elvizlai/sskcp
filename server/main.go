@@ -37,7 +37,7 @@ func main() {
 	flag.IntVar(&c.DSCP, "dscp", 46, "set DSCP(6bit)")
 
 	flag.IntVar(&c.NoDelay, "nodelay", 0, "set mode param nodelay")
-	flag.IntVar(&c.Interval, "interval", 40, "set mode param interval")
+	flag.IntVar(&c.Interval, "interval", 30, "set mode param interval")
 	flag.IntVar(&c.Resend, "resend", 2, "set mode param resend")
 	flag.IntVar(&c.NoCongestion, "nc", 1, "set mode param nc")
 
