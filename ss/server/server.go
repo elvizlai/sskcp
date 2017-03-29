@@ -341,7 +341,7 @@ func RunUDP(port, password string, auth bool) {
 	var cipher *ss.Cipher
 	port_i, _ := strconv.Atoi(port)
 	log.Printf("listening UDP port %v\n", port)
-	conn, err := net.ListenUDP("UDP", &net.UDPAddr{
+	conn, err := net.ListenUDP("udp", &net.UDPAddr{
 		IP:   net.IPv6zero,
 		Port: port_i,
 	})
