@@ -91,7 +91,7 @@ func main() {
 		if sss.UDP {
 			go sss.RunUDP(port, password, sss.Config.Auth)
 		}
-		go kcps.RunKCPTun("0.0.0.0:"+strconv.Itoa(10000+portNumeric), "127.0.0.1:"+port)
+		go kcps.RunKCPTun(":"+strconv.Itoa(10000+portNumeric), "127.0.0.1:"+port)
 	}
 
 	sss.WaitSignal()
